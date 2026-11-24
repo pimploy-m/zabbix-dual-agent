@@ -1,15 +1,14 @@
 # zabbix-dual-agent
 Dual Zabbix Agent Deployment
 
-
-ATKH Agent
-
+#name Agent
 Port 10060
 Config: /etc/zabbix/zabbix_agentd_2.conf
-AMS Agent
 
+#name Agent
 Port 10050
 Config: /etc/zabbix/zabbix_agentd_ams.conf
+
 Install
 chmod +x install_dual_zabbix_agent.sh
 
