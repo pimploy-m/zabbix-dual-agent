@@ -50,7 +50,7 @@ echo
 # PRECHECK
 ###############################################################################
 
-echo "[1.1/10] Validating prerequisites..."
+echo "[1/10] Validating prerequisites..."
 
 if [ ! -x /usr/sbin/zabbix_agentd ]; then
     echo "ERROR: /usr/sbin/zabbix_agentd not found"
@@ -64,24 +64,22 @@ mkdir -p /var/log/zabbix
 # BACKUP EXISTING CONFIGURATION
 ###############################################################################
 
-echo "[1.2/10] Creating backup..."
+echo "[2/10] Creating backup..."
 
 BACKUP_DIR="/tmp/zabbix_backup_$(date +%Y%m%d_%H%M%S)"
-
 mkdir -p "${BACKUP_DIR}"
-
 cp -p /etc/zabbix/*.conf "${BACKUP_DIR}/" 2>/dev/null || true
-
 cp -p /etc/systemd/system/zabbix-agent*.service "${BACKUP_DIR}/" 2>/dev/null || true
-
 echo "Backup created: ${BACKUP_DIR}"
+echo "Backup files:"
+ls -l "${BACKUP_DIR}"
 echo
 
 ###############################################################################
 # CREATE ATKH CONFIG
 ###############################################################################
 
-echo "[2/10] Creating ATKH config..."
+echo "[3/10] Creating ATKH config..."
 
 cat > /etc/zabbix/zabbix_agentd_2.conf <<EOF
 PidFile=/run/zabbix/zabbix_agentd_2.pid
@@ -89,11 +87,8 @@ LogFile=/var/log/zabbix/zabbix_agentd_2.log
 
 Server=${ATKH_SERVER}
 ServerActive=${ATKH_SERVER}
-
 Hostname=${HOSTNAME_FQDN}
-
 ListenPort=10060
-
 Timeout=30
 EOF
 
@@ -101,7 +96,7 @@ EOF
 # CREATE AMS CONFIG
 ###############################################################################
 
-echo "[3/10] Creating AMS config..."
+echo "[4/10] Creating AMS config..."
 
 cat > /etc/zabbix/zabbix_agentd_ams.conf <<EOF
 PidFile=/run/zabbix/zabbix_agentd_ams.pid
@@ -109,11 +104,8 @@ LogFile=/var/log/zabbix/zabbix_agentd_ams.log
 
 Server=${AMS_SERVER}
 ServerActive=${AMS_SERVER}
-
 Hostname=${HOSTNAME_FQDN}
-
 ListenPort=10050
-
 Timeout=30
 EOF
 
@@ -121,7 +113,7 @@ EOF
 # CREATE ATKH SERVICE
 ###############################################################################
 
-echo "[4/10] Creating ATKH service..."
+echo "[5/10] Creating ATKH service..."
 
 cat > /etc/systemd/system/zabbix-agent-atkh.service <<EOF
 [Unit]
@@ -143,7 +135,7 @@ EOF
 # CREATE AMS SERVICE
 ###############################################################################
 
-echo "[5/10] Creating AMS service..."
+echo "[6/10] Creating AMS service..."
 
 cat > /etc/systemd/system/zabbix-agent-ams.service <<EOF
 [Unit]
@@ -165,25 +157,11 @@ EOF
 # VALIDATE CONFIG
 ###############################################################################
 
-echo "[6/10] Validating configurations..."
+echo "[7/10] Validating configurations..."
 
 zabbix_agentd -t agent.ping -c /etc/zabbix/zabbix_agentd_2.conf >/dev/null
 
 zabbix_agentd -t agent.ping -c /etc/zabbix/zabbix_agentd_ams.conf >/dev/null
-
-###############################################################################
-# STOP EXISTING AGENTS (IF ANY)
-###############################################################################
-
-echo "[7/10] Cleaning existing processes..."
-
-systemctl stop zabbix-agent-atkh 2>/dev/null || true
-systemctl stop zabbix-agent-ams 2>/dev/null || true
-
-pkill zabbix_agentd 2>/dev/null || true
-
-rm -f /run/zabbix/zabbix_agentd_2.pid
-rm -f /run/zabbix/zabbix_agentd_ams.pid
 
 ###############################################################################
 # RELOAD SYSTEMD
