@@ -1,20 +1,17 @@
 # zabbix-dual-agent
 Dual Zabbix Agent Deployment
 
-#name Agent
-Port 10060
-Config: /etc/zabbix/zabbix_agentd_2.conf
+Version: 1.0.0
 
-#name Agent
-Port 10050
-Config: /etc/zabbix/zabbix_agentd_ams.conf
+Supported:
+RHEL 8
+RHEL 9
+Zabbix Agent 7.x
 
-Install
+Services:
+#1 Agent (Port 10060)
+#2 Agent (Port 10050)
+
+Installation:
 chmod +x install_dual_zabbix_agent.sh
-
 ./install_dual_zabbix_agent.sh
-
-Verify
-systemctl status zabbix-agent-atkh systemctl status zabbix-agent-ams
-
-ss -tlnp | egrep '10050|10060'
