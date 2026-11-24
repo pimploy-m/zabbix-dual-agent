@@ -50,7 +50,7 @@ echo
 # PRECHECK
 ###############################################################################
 
-echo "[1/10] Validating prerequisites..."
+echo "[1.1/10] Validating prerequisites..."
 
 if [ ! -x /usr/sbin/zabbix_agentd ]; then
     echo "ERROR: /usr/sbin/zabbix_agentd not found"
@@ -60,6 +60,22 @@ fi
 mkdir -p /etc/zabbix
 mkdir -p /run/zabbix
 mkdir -p /var/log/zabbix
+###############################################################################
+# BACKUP EXISTING CONFIGURATION
+###############################################################################
+
+echo "[1.2/10] Creating backup..."
+
+BACKUP_DIR="/tmp/zabbix_backup_$(date +%Y%m%d_%H%M%S)"
+
+mkdir -p "${BACKUP_DIR}"
+
+cp -p /etc/zabbix/*.conf "${BACKUP_DIR}/" 2>/dev/null || true
+
+cp -p /etc/systemd/system/zabbix-agent*.service "${BACKUP_DIR}/" 2>/dev/null || true
+
+echo "Backup created: ${BACKUP_DIR}"
+echo
 
 ###############################################################################
 # CREATE ATKH CONFIG
