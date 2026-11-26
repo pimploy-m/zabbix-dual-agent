@@ -3,7 +3,7 @@
 ###############################################################################
 # install_dual_zabbix_agent.sh
 #
-# Version : 1.0.0
+# Author: Pimploy M.
 #
 # Purpose:
 #   Deploy dual Zabbix Agent instances on the same server
@@ -20,8 +20,8 @@
 
 set -e
 
-VERSION="1.0.0"
-BUILD_DATE="2026-11-24"
+VERSION="1.1.1"
+BUILD_DATE="2026-11-26"
 
 ###############################################################################
 # PARAMETERS
@@ -50,7 +50,7 @@ echo
 # PRECHECK
 ###############################################################################
 
-echo "[1/10] Validating prerequisites..."
+echo "[1/11] Validating prerequisites..."
 
 if [ ! -x /usr/sbin/zabbix_agentd ]; then
     echo "ERROR: /usr/sbin/zabbix_agentd not found"
@@ -64,7 +64,7 @@ mkdir -p /var/log/zabbix
 # BACKUP EXISTING CONFIGURATION
 ###############################################################################
 
-echo "[2/10] Creating backup..."
+echo "[2/11] Creating backup..."
 
 BACKUP_DIR="/tmp/zabbix_backup_$(date +%Y%m%d_%H%M%S)"
 mkdir -p "${BACKUP_DIR}"
@@ -76,10 +76,25 @@ ls -l "${BACKUP_DIR}"
 echo
 
 ###############################################################################
+# MIGRATE EXISTING AGENT
+###############################################################################
+
+echo "[3/11] Checking existing zabbix-agent..."
+
+if systemctl is-active --quiet zabbix-agent; then
+    echo "Existing zabbix-agent detected."
+    
+    systemctl stop zabbix-agent
+    systemctl disable zabbix-agent
+
+    echo "Legacy zabbix-agent stopped and disabled."
+fi
+echo
+###############################################################################
 # CREATE ATKH CONFIG
 ###############################################################################
 
-echo "[3/10] Creating ATKH config..."
+echo "[4/11] Creating ATKH config..."
 
 cat > /etc/zabbix/zabbix_agentd_2.conf <<EOF
 PidFile=/run/zabbix/zabbix_agentd_2.pid
@@ -90,13 +105,14 @@ ServerActive=${ATKH_SERVER}
 Hostname=${HOSTNAME_FQDN}
 ListenPort=10060
 Timeout=30
+Include=/etc/zabbix/zabbix_agentd.d/*.conf
 EOF
 
 ###############################################################################
 # CREATE AMS CONFIG
 ###############################################################################
 
-echo "[4/10] Creating AMS config..."
+echo "[5/11] Creating AMS config..."
 
 cat > /etc/zabbix/zabbix_agentd_ams.conf <<EOF
 PidFile=/run/zabbix/zabbix_agentd_ams.pid
@@ -107,13 +123,15 @@ ServerActive=${AMS_SERVER}
 Hostname=${HOSTNAME_FQDN}
 ListenPort=10050
 Timeout=30
+Include=/etc/zabbix/zabbix_agentd.d/*.conf
+UserParameter=file.find[*],/usr/bin/find "\$1" -mindepth "\$4" -maxdepth "\$5" -type f -name "\$2" -mmin "\$3" | wc -l
 EOF
 
 ###############################################################################
 # CREATE ATKH SERVICE
 ###############################################################################
 
-echo "[5/10] Creating ATKH service..."
+echo "[6/11] Creating ATKH service..."
 
 cat > /etc/systemd/system/zabbix-agent-atkh.service <<EOF
 [Unit]
@@ -135,7 +153,7 @@ EOF
 # CREATE AMS SERVICE
 ###############################################################################
 
-echo "[6/10] Creating AMS service..."
+echo "[7/11] Creating AMS service..."
 
 cat > /etc/systemd/system/zabbix-agent-ams.service <<EOF
 [Unit]
@@ -157,17 +175,16 @@ EOF
 # VALIDATE CONFIG
 ###############################################################################
 
-echo "[7/10] Validating configurations..."
+echo "[8/11] Validating configurations..."
 
 zabbix_agentd -t agent.ping -c /etc/zabbix/zabbix_agentd_2.conf >/dev/null
-
 zabbix_agentd -t agent.ping -c /etc/zabbix/zabbix_agentd_ams.conf >/dev/null
 
 ###############################################################################
 # RELOAD SYSTEMD
 ###############################################################################
 
-echo "[8/10] Reloading systemd..."
+echo "[9/11] Reloading systemd..."
 
 systemctl daemon-reload
 
@@ -175,7 +192,7 @@ systemctl daemon-reload
 # ENABLE SERVICES
 ###############################################################################
 
-echo "[9/10] Enabling services..."
+echo "[10/11] Enabling services..."
 
 systemctl enable zabbix-agent-atkh
 systemctl enable zabbix-agent-ams
@@ -184,7 +201,7 @@ systemctl enable zabbix-agent-ams
 # START SERVICES
 ###############################################################################
 
-echo "[10/10] Starting services..."
+echo "[11/11] Starting services..."
 
 systemctl restart zabbix-agent-atkh
 systemctl restart zabbix-agent-ams
