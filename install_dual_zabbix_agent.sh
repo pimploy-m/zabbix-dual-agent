@@ -60,6 +60,7 @@ fi
 mkdir -p /etc/zabbix
 mkdir -p /run/zabbix
 mkdir -p /var/log/zabbix
+
 ###############################################################################
 # BACKUP EXISTING CONFIGURATION
 ###############################################################################
@@ -67,12 +68,20 @@ mkdir -p /var/log/zabbix
 echo "[2/11] Creating backup..."
 
 BACKUP_DIR="/tmp/zabbix_backup_$(date +%Y%m%d_%H%M%S)"
+
 mkdir -p "${BACKUP_DIR}"
+
 cp -p /etc/zabbix/*.conf "${BACKUP_DIR}/" 2>/dev/null || true
-cp -p /etc/systemd/system/zabbix-agent*.service "${BACKUP_DIR}/" 2>/dev/null || true
+
+cp -p /etc/systemd/system/zabbix-agent*.service \
+      "${BACKUP_DIR}/" 2>/dev/null || true
+
 echo "Backup created: ${BACKUP_DIR}"
+
 echo "Backup files:"
-ls -l "${BACKUP_DIR}"
+
+ls -lah "${BACKUP_DIR}"
+
 echo
 
 ###############################################################################
@@ -81,15 +90,19 @@ echo
 
 echo "[3/11] Checking existing zabbix-agent..."
 
-if systemctl is-active --quiet zabbix-agent; then
-    echo "Existing zabbix-agent detected."
-    
-    systemctl stop zabbix-agent
-    systemctl disable zabbix-agent
+if systemctl list-unit-files | grep -q "^zabbix-agent.service"; then
 
-    echo "Legacy zabbix-agent stopped and disabled."
+    echo "Existing zabbix-agent detected."
+
+    systemctl stop zabbix-agent 2>/dev/null || true
+    systemctl disable zabbix-agent 2>/dev/null || true
+
+    echo "Legacy zabbix-agent stopped and disabled (configuration retained for rollback)."
+
 fi
+
 echo
+
 ###############################################################################
 # CREATE ATKH CONFIG
 ###############################################################################
@@ -105,7 +118,7 @@ ServerActive=${ATKH_SERVER}
 Hostname=${HOSTNAME_FQDN}
 ListenPort=10060
 Timeout=30
-Include=/etc/zabbix/zabbix_agentd.d/*.conf
+
 EOF
 
 ###############################################################################
@@ -123,8 +136,9 @@ ServerActive=${AMS_SERVER}
 Hostname=${HOSTNAME_FQDN}
 ListenPort=10050
 Timeout=30
-Include=/etc/zabbix/zabbix_agentd.d/*.conf
+
 UserParameter=file.find[*],/usr/bin/find "\$1" -mindepth "\$4" -maxdepth "\$5" -type f -name "\$2" -mmin "\$3" | wc -l
+
 EOF
 
 ###############################################################################
